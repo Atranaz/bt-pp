@@ -1,4 +1,7 @@
 {% extends 'base.html.twig' %}
+{% block title %}
+  {{ data.title }}
+{% endblock %}
 
 {% block body %}
   <div class="text-center mt-5">
@@ -6,7 +9,9 @@
       {{ data.title }}
     </h1>
     <p class="lead">
-      Overall phone rating is 9/10 and you can read reviews.
+      Overall phone rating is 9/10 and you can read <a href="#reviews">
+        reviews
+      </a>.
     </p>
 
     <hr />
@@ -80,7 +85,7 @@
           </table>
         </div>
       </div>
-      <div class="col-md-12">
+      <div class="col-md-12" id="reviews">
         <h2>
           Reviews
         </h2>
