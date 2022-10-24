@@ -31,7 +31,9 @@
     <!-- Responsive navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container">
-        <a class="navbar-brand" href="#">Start Bootstrap</a>
+        <a class="navbar-brand" href="{{ path('phone_list') }}">
+          Start Bootstrap
+        </a>
         <button class="navbar-toggler"
           type="button"
           data-bs-toggle="collapse"
@@ -55,6 +57,15 @@
                 {{ app.user ? 'Logout' : 'Login' }}
               </a>
             </li>
+            {% if app.user %}
+
+            {% else %}
+              <li class="nav-item">
+                <a class="nav-link" href="{{ path('app_register') }}">
+                  Register
+                </a>
+              </li>
+            {% endif %}
           </ul>
         </div>
       </div>

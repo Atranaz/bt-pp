@@ -14,15 +14,25 @@ use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
+use Symfony\Component\Form\Forms;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+
+use Symfony\Component\Security\Core\Security;
+
 class PhoneController extends AbstractController
 {
     private $client;
+    private $security;
     private PhoneReviewsRepository $PhoneReviewsRepository;
     public function __construct(
         HttpClientInterface $client,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        Security $security
     ) {
         $this->client = $client;
+        $this->security = $security;
         $this->PhoneReviewsRepository = $entityManager->getRepository(
             PhoneReviews::class
         );
@@ -39,31 +49,71 @@ class PhoneController extends AbstractController
     public function show(string $slug): Response
     {
         $api_data = $this->phoneDetail($slug);
-        $review_data = $this->getPhoneReviewsCOPY($slug);
+        $review_data = $this->getPhoneReviews($slug);
+        $form = $this->createFormBuilder(null, [
+            'action' => '/review',
+            'method' => 'POST',
+        ])
+            ->add('phone_id', HiddenType::class, [
+                'data' => $slug,
+            ])
+            ->add('review_text', TextareaType::class, [
+                'label' => ' ',
+                'attr' => [
+                    'class' => 'form-control',
+                    'id' => '1',
+                ],
+            ])
+            ->getForm();
+
         return $this->render('phone/detailpage.html.twig', [
             'data' => $api_data,
             'reviews' => $review_data,
+            'form' => $form->createView(),
         ]);
     }
 
-    #[Route('/review', name:'create_review')]
-    public function createReview(ManagerRegistry $doctrine): Response
-    {
-        // make sure the data is correct then start process
-        // IF data not suitable return back with error
+    #[Route('/review', name: 'create_review' , methods: ['POST','HEAD'])]
+    public function createReview(
+        Request $request,
+        ManagerRegistry $doctrine
+    ): Response {
+        $user = $this->security->getUser();
 
+        print_r($user);
+        $form = $this->createFormBuilder()
+            ->add('phone_id', HiddenType::class, [
+                'data' => '',
+            ])
+            ->add('review_text', TextareaType::class, [
+                'attr' => [
+                    'class' => 'text-editor form-control',
+                    'id' => '1',
+                    'label' => ' ',
+                ],
+            ])
+
+            ->getForm();
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
+        }
         $entityManager = $doctrine->getManager();
+        $date = new \DateTime();
         $review = new PhoneReviews();
-        $review->setPhoneId('google_pixel_7_pro-11908');
-        $review->setUserId(1);
-        $review->setReviewText('great Phone');
+        $review->setPhoneId($data['phone_id']);
+        $review->setUserId($user->getId());
+        $review->setReviewText($data['review_text']);
+        $review->setCreated($date);
         $review->setRating(4);
 
         $entityManager->persist($review);
-
         $entityManager->flush();
 
-        return new Response('Saved new entery');
+        $route = $request->headers->get('referer');
+
+        return $this->redirect($route);
     }
 
     private function phoneList()
@@ -109,7 +159,7 @@ class PhoneController extends AbstractController
         return $content;
     }
 
-    private function getPhoneReviewsCOPY(string $phone_id)
+    private function getPhoneReviews(string $phone_id)
     {
         $review_array = [];
         $reviews = $this->PhoneReviewsRepository->findBy([
